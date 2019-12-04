@@ -6,7 +6,7 @@ from threading import Thread
 import time
 import datetime
 
-URL = 'https://tsn.ua/ukrayina'
+URL = 'https://delo.ua/'
 
 def get_article_urls(url = URL):
     '''
@@ -18,9 +18,9 @@ def get_article_urls(url = URL):
 
     urls = []
 
-    for div in html_doc.find_all('div', {'class' : 'c-post-meta'}):
+    for a in html_doc.find_all('a', {'itemprop' : 'url'}):
 
-        url = div.find('a').get('href')
+        url = a.get('href')
         urls.append(url)
 
     return urls
@@ -52,10 +52,10 @@ def parse_article(url):
         response = requests.get(url)
         html_doc = bs(response.text, 'lxml')
 
-        title = html_doc.find('h1').text
-        text = html_doc.find('article', {'class' : 'o-cmr u-content-read'}).text
+        title = html_doc.find('h1', {'class' : 'ttl'}).text
+        text = html_doc.find('div', {'class' : 'contentType'}).text
 
-        tag_list = html_doc.find('ul', {'class':'c-tag-list'})
+        tag_list = html_doc.find('ul', {'class':'teg-list'})
         tags = []
 
         if not tag_list is None:
@@ -63,7 +63,7 @@ def parse_article(url):
                 tags.append(tag.text)
 
         # example: 2019-12-04T15:12:00+02:00
-        time = html_doc.find('time', {'class' : 'dt-published c-post-time'}).get('datetime')
+        time = html_doc.find('meta', {'itemprop' : 'datePublished'}).get('content')
         time = datetime.datetime.fromisoformat(time)
 
         # there is no english source
@@ -114,11 +114,7 @@ class Parser(Thread):
             # if an hour have passed
             if time.time()-lastUpdate > 3600:
 
-                c = 5
                 for article in get_article_urls():
-                    c-=1
-                    if c==0:
-                        break
                     parse_result = parse_article(article)
 
                     if not parse_result == {}:
